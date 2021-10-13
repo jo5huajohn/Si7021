@@ -7,10 +7,9 @@
 
 #include "Si7021.h"
 
-uint8_t si7021_status = 0;
 uint8_t cmd[2] = { };
-uint8_t si7021_buff[2] = { };
-uint8_t si7021_elec_id[8] = { };
+uint8_t buff[2] = { };
+HAL_StatusTypeDef si7021_status = HAL_OK;
 
 float Si7021_Read_Rel_Humidity(I2C_HandleTypeDef *hi2c, measurementmode_t measurement_mode)
 {
@@ -34,8 +33,8 @@ float Si7021_Read_Rel_Humidity(I2C_HandleTypeDef *hi2c, measurementmode_t measur
         return -1;
     }
 
-    HAL_I2C_Master_Receive(hi2c, SI7021_I2C_SLAVE_ADDR, si7021_buff, 2, 100);
-    rh_code = (125 * ((si7021_buff[0] << 8) | si7021_buff[1]) / 65536) - 6;
+    HAL_I2C_Master_Receive(hi2c, SI7021_I2C_SLAVE_ADDR, buff, 2, 100);
+    rh_code = (125 * ((buff[0] << 8) | buff[1]) / 65536) - 6;
 
         return rh_code;
 }
@@ -68,8 +67,8 @@ float Si7021_Read_Temp_C(I2C_HandleTypeDef *hi2c, measurementmode_t measurement_
         return -1;
     }
 
-    HAL_I2C_Master_Receive(hi2c, SI7021_I2C_SLAVE_ADDR, si7021_buff, 2, 100);
-    temp_code = (175.72 * ((si7021_buff[0] << 8) | si7021_buff[1]) / 65536) - 46.85;
+    HAL_I2C_Master_Receive(hi2c, SI7021_I2C_SLAVE_ADDR, buff, 2, 100);
+    temp_code = (175.72 * ((buff[0] << 8) | buff[1]) / 65536) - 46.85;
 
     return temp_code;
 }
@@ -88,26 +87,26 @@ HAL_StatusTypeDef Si7021_Write_RH_Temp_Resolution(I2C_HandleTypeDef *hi2c, resol
     cmd[0] = SI7021_CMD_READ_USR_REG_1;
 
     HAL_I2C_Master_Transmit(hi2c, SI7021_I2C_SLAVE_ADDR, &cmd[0], 1, 100);
-    HAL_I2C_Master_Receive(hi2c, SI7021_I2C_SLAVE_ADDR, &si7021_buff[0], 1, 100);
+    HAL_I2C_Master_Receive(hi2c, SI7021_I2C_SLAVE_ADDR, &buff[0], 1, 100);
 
     cmd[0] = SI7021_CMD_WRITE_USR_REG_1;
 
     switch (resolution)
     {
         case RES_RH12_TEMP14:
-            cmd[1] = si7021_buff[0] & ~(SI7021_USR_REG_1_D7 | SI7021_USR_REG_1_D0);
+            cmd[1] = buff[0] & ~(SI7021_USR_REG_1_D7 | SI7021_USR_REG_1_D0);
         break;
 
         case RES_RH8_TEMP12:
-            cmd[1] = (si7021_buff[0] & ~SI7021_USR_REG_1_D7) | SI7021_USR_REG_1_D0;
+            cmd[1] = (buff[0] & ~SI7021_USR_REG_1_D7) | SI7021_USR_REG_1_D0;
         break;
 
         case RES_RH10_TEMP13:
-            cmd[1] = (si7021_buff[0] | SI7021_USR_REG_1_D7) & ~SI7021_USR_REG_1_D0;
+            cmd[1] = (buff[0] | SI7021_USR_REG_1_D7) & ~SI7021_USR_REG_1_D0;
         break;
 
         case RES_RH11_TEMP11:
-            cmd[1] = si7021_buff[0] | SI7021_USR_REG_1_D7 | SI7021_USR_REG_1_D0;
+            cmd[1] = buff[0] | SI7021_USR_REG_1_D7 | SI7021_USR_REG_1_D0;
         break;
     }
 
@@ -121,10 +120,10 @@ HAL_StatusTypeDef Si7021_Write_Heater_State(I2C_HandleTypeDef *hi2c, heater_t st
     cmd[0] = SI7021_CMD_READ_USR_REG_1;
 
     HAL_I2C_Master_Transmit(hi2c, SI7021_I2C_SLAVE_ADDR, &cmd[0], 1, 100);
-    HAL_I2C_Master_Receive(hi2c, SI7021_I2C_SLAVE_ADDR, &si7021_buff[0], 1, 100);
+    HAL_I2C_Master_Receive(hi2c, SI7021_I2C_SLAVE_ADDR, &buff[0], 1, 100);
 
     cmd[0] = SI7021_CMD_WRITE_USR_REG_1;
-    cmd[1] = (HEATER_ENABLE == state) ? (si7021_buff[0] | SI7021_USR_REG_1_D2) : (si7021_buff[0] & ~SI7021_USR_REG_1_D2);
+    cmd[1] = (HEATER_ENABLE == state) ? (buff[0] | SI7021_USR_REG_1_D2) : (buff[0] & ~SI7021_USR_REG_1_D2);
 
     si7021_status = HAL_I2C_Master_Transmit(hi2c, SI7021_I2C_SLAVE_ADDR, cmd, 2, 100);
 
@@ -137,9 +136,9 @@ resolution_t Si7021_Read_RH_Temp_Resolution(I2C_HandleTypeDef *hi2c)
     cmd[0] = SI7021_CMD_READ_USR_REG_1;
 
     HAL_I2C_Master_Transmit(hi2c, SI7021_I2C_SLAVE_ADDR, &cmd[0], 1, 100);
-    HAL_I2C_Master_Receive(hi2c, SI7021_I2C_SLAVE_ADDR, &si7021_buff[0], 1, 100);
+    HAL_I2C_Master_Receive(hi2c, SI7021_I2C_SLAVE_ADDR, &buff[0], 1, 100);
 
-    switch (si7021_buff[0] & (SI7021_USR_REG_1_D7| SI7021_USR_REG_1_D0))
+    switch (buff[0] & (SI7021_USR_REG_1_D7| SI7021_USR_REG_1_D0))
     {
         case 0x00:
             resolution = RES_RH12_TEMP14;
@@ -169,9 +168,9 @@ vddstatus_t Si7021_Read_Vdd_Status(I2C_HandleTypeDef *hi2c)
 {
     cmd[0] = SI7021_CMD_READ_USR_REG_1;
     HAL_I2C_Master_Transmit(hi2c, SI7021_I2C_SLAVE_ADDR, &cmd[0], 1, 100);
-    HAL_I2C_Master_Receive(hi2c, SI7021_I2C_SLAVE_ADDR, &si7021_buff[0], 1, 100);
+    HAL_I2C_Master_Receive(hi2c, SI7021_I2C_SLAVE_ADDR, &buff[0], 1, 100);
 
-    return SI7021_USR_REG_1_D6 == (si7021_buff[0] & SI7021_USR_REG_1_D6) ? VDD_LOW : VDD_OK;
+    return SI7021_USR_REG_1_D6 == (buff[0] & SI7021_USR_REG_1_D6) ? VDD_LOW : VDD_OK;
 }
 
 heater_t Si7021_Read_Heater_Status(I2C_HandleTypeDef *hi2c)
@@ -179,9 +178,9 @@ heater_t Si7021_Read_Heater_Status(I2C_HandleTypeDef *hi2c)
     cmd[0] = SI7021_CMD_READ_USR_REG_1;
 
     HAL_I2C_Master_Transmit(hi2c, SI7021_I2C_SLAVE_ADDR, &cmd[0], 1, 100);
-    HAL_I2C_Master_Receive(hi2c, SI7021_I2C_SLAVE_ADDR, &si7021_buff[0], 1, 100);
+    HAL_I2C_Master_Receive(hi2c, SI7021_I2C_SLAVE_ADDR, &buff[0], 1, 100);
 
-    return SI7021_USR_REG_1_D2 == (si7021_buff[0] & SI7021_USR_REG_1_D2) ? HEATER_ENABLE : HEATER_DISABLE;
+    return SI7021_USR_REG_1_D2 == (buff[0] & SI7021_USR_REG_1_D2) ? HEATER_ENABLE : HEATER_DISABLE;
 }
 
 HAL_StatusTypeDef Si7021_Write_Heater_Current(I2C_HandleTypeDef *hi2c, heatercurrent_t current)
@@ -189,34 +188,34 @@ HAL_StatusTypeDef Si7021_Write_Heater_Current(I2C_HandleTypeDef *hi2c, heatercur
     cmd[0] = SI7021_CMD_READ_HTR_CTRL_REG;
 
     HAL_I2C_Master_Transmit(hi2c, SI7021_I2C_SLAVE_ADDR, &cmd[0], 1, 100);
-    HAL_I2C_Master_Receive(hi2c, SI7021_I2C_SLAVE_ADDR, &si7021_buff[0], 1, 100);
+    HAL_I2C_Master_Receive(hi2c, SI7021_I2C_SLAVE_ADDR, &buff[0], 1, 100);
 
     cmd[0] = SI7021_CMD_WRITE_HTR_CTRL_REG;
 
     switch (current)
     {
         case MA_309:
-            cmd[1] = si7021_buff[0] & ~(SI7021_HEATER_CONTROL_REG_D3 | SI7021_HEATER_CONTROL_REG_D2 | SI7021_HEATER_CONTROL_REG_D1 | SI7021_HEATER_CONTROL_REG_D0);
+            cmd[1] = buff[0] & ~(SI7021_HEATER_CONTROL_REG_D3 | SI7021_HEATER_CONTROL_REG_D2 | SI7021_HEATER_CONTROL_REG_D1 | SI7021_HEATER_CONTROL_REG_D0);
         break;
 
         case MA_918:
-            cmd[1] = (si7021_buff[0] | SI7021_HEATER_CONTROL_REG_D0) & ~(SI7021_HEATER_CONTROL_REG_D3 | SI7021_HEATER_CONTROL_REG_D2 | SI7021_HEATER_CONTROL_REG_D1);
+            cmd[1] = (buff[0] | SI7021_HEATER_CONTROL_REG_D0) & ~(SI7021_HEATER_CONTROL_REG_D3 | SI7021_HEATER_CONTROL_REG_D2 | SI7021_HEATER_CONTROL_REG_D1);
         break;
 
         case MA_1524:
-            cmd[1] = (si7021_buff[0] | SI7021_HEATER_CONTROL_REG_D1) & ~(SI7021_HEATER_CONTROL_REG_D3 | SI7021_HEATER_CONTROL_REG_D2 | SI7021_HEATER_CONTROL_REG_D0);
+            cmd[1] = (buff[0] | SI7021_HEATER_CONTROL_REG_D1) & ~(SI7021_HEATER_CONTROL_REG_D3 | SI7021_HEATER_CONTROL_REG_D2 | SI7021_HEATER_CONTROL_REG_D0);
         break;
 
         case MA_2739:
-            cmd[1] = (si7021_buff[0] | SI7021_HEATER_CONTROL_REG_D2) & ~(SI7021_HEATER_CONTROL_REG_D3 | SI7021_HEATER_CONTROL_REG_D1 | SI7021_HEATER_CONTROL_REG_D0);
+            cmd[1] = (buff[0] | SI7021_HEATER_CONTROL_REG_D2) & ~(SI7021_HEATER_CONTROL_REG_D3 | SI7021_HEATER_CONTROL_REG_D1 | SI7021_HEATER_CONTROL_REG_D0);
         break;
 
         case MA_5169:
-            cmd[1] = (si7021_buff[0] | SI7021_HEATER_CONTROL_REG_D3) & ~(SI7021_HEATER_CONTROL_REG_D2 | SI7021_HEATER_CONTROL_REG_D1 | SI7021_HEATER_CONTROL_REG_D0);
+            cmd[1] = (buff[0] | SI7021_HEATER_CONTROL_REG_D3) & ~(SI7021_HEATER_CONTROL_REG_D2 | SI7021_HEATER_CONTROL_REG_D1 | SI7021_HEATER_CONTROL_REG_D0);
         break;
 
         case MA_9420:
-            cmd[1] = si7021_buff[0] | SI7021_HEATER_CONTROL_REG_D3 | SI7021_HEATER_CONTROL_REG_D2 | SI7021_HEATER_CONTROL_REG_D1 | SI7021_HEATER_CONTROL_REG_D0;
+            cmd[1] = buff[0] | SI7021_HEATER_CONTROL_REG_D3 | SI7021_HEATER_CONTROL_REG_D2 | SI7021_HEATER_CONTROL_REG_D1 | SI7021_HEATER_CONTROL_REG_D0;
         break;
     }
 
@@ -231,9 +230,9 @@ heatercurrent_t Si7021_Read_Heater_Current(I2C_HandleTypeDef *hi2c)
     cmd[0] = SI7021_CMD_READ_HTR_CTRL_REG;
 
     HAL_I2C_Master_Transmit(hi2c, SI7021_I2C_SLAVE_ADDR, &cmd[0], 1, 100);
-    HAL_I2C_Master_Receive(hi2c, SI7021_I2C_SLAVE_ADDR, &si7021_buff[0], 1, 100);
+    HAL_I2C_Master_Receive(hi2c, SI7021_I2C_SLAVE_ADDR, &buff[0], 1, 100);
 
-    switch (si7021_buff[0] & (SI7021_HEATER_CONTROL_REG_D3 | SI7021_HEATER_CONTROL_REG_D2 | SI7021_HEATER_CONTROL_REG_D1 | SI7021_HEATER_CONTROL_REG_D0))
+    switch (buff[0] & (SI7021_HEATER_CONTROL_REG_D3 | SI7021_HEATER_CONTROL_REG_D2 | SI7021_HEATER_CONTROL_REG_D1 | SI7021_HEATER_CONTROL_REG_D0))
     {
         case 0x00:
             current = MA_309;
@@ -270,6 +269,7 @@ heatercurrent_t Si7021_Read_Heater_Current(I2C_HandleTypeDef *hi2c)
 uint64_t Si7021_Read_Electronic_Serial_Number(I2C_HandleTypeDef *hi2c)
 {
     uint64_t serial_num = 0;
+    uint8_t si7021_elec_id[8] = { };
 
     cmd[0] = SI7021_CMD_READ_ELECTRONIC_ID_BYTE_1_0;
     cmd[1] = SI7021_CMD_READ_ELECTRONIC_ID_BYTE_1_1;
@@ -294,6 +294,8 @@ uint64_t Si7021_Read_Electronic_Serial_Number(I2C_HandleTypeDef *hi2c)
 
 device_t Si7021_Read_Device(I2C_HandleTypeDef *hi2c)
 {
+    uint8_t si7021_elec_id[8] = { };
+
     cmd[0] = SI7021_CMD_READ_ELECTRONIC_ID_BYTE_1_0;
     cmd[1] = SI7021_CMD_READ_ELECTRONIC_ID_BYTE_1_1;
 
@@ -337,9 +339,9 @@ firmware_t Si7021_Read_Firmware_Revision(I2C_HandleTypeDef *hi2c)
     cmd[1] = SI7021_CMD_READ_FIRMWARE_REV_1;
 
     HAL_I2C_Master_Transmit(hi2c, SI7021_I2C_SLAVE_ADDR, cmd, 2, 100);
-    HAL_I2C_Master_Receive(hi2c, SI7021_I2C_SLAVE_ADDR, &si7021_buff[0], 1, 100);
+    HAL_I2C_Master_Receive(hi2c, SI7021_I2C_SLAVE_ADDR, &buff[0], 1, 100);
 
-    switch(si7021_buff[0])
+    switch(buff[0])
     {
         case 0xFF:
             return V1;
